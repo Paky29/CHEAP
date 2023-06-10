@@ -1,35 +1,41 @@
 import numpy as np
-from sklearn.linear_model import ElasticNet, LinearRegression, Lasso, Ridge
+from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import GradientBoostingRegressor
-import pandas as pd
 from deap import base, creator, tools
 from sklearn.model_selection import train_test_split
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from feature_selection import GeneticAlgorithm
 
-#Stacking
-#LassoRegression, RidgeRegression, ElasticNet
+#Models: Random Forest, SVR, Gradient Boosting, knn
+#Meta: Linear Regression
 
 def evaluate(individual, X_train, X_test, y_train, y_test):
     selected_features = [feature for feature, mask in zip(X_train.columns, individual) if mask]
     X_train_selected = X_train[selected_features]
     X_test_selected = X_test[selected_features]
 
-    lasso_regressor = Lasso()
-    lasso_regressor.fit(X_train_selected, y_train)
+    rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf_regressor.fit(X_train_selected, y_train)
 
-    ridge_regressor = Ridge()
-    ridge_regressor.fit(X_train_selected, y_train)
+    svr = SVR(kernel='sigmoid')
+    svr.fit(X_train_selected, y_train)
 
-    elasticnet_regressor = ElasticNet()
-    elasticnet_regressor.fit(X_train_selected, y_train)
+    gb_regressor = GradientBoostingRegressor()
+    gb_regressor.fit(X_train_selected, y_train)
+
+    knn_regressor = KNeighborsRegressor(n_neighbors=5)
+    knn_regressor.fit(X_train_selected, y_train)
 
     #previsioni sul set di test
-    y_pred_lasso = lasso_regressor.predict(X_test_selected)
-    y_pred_ridge = ridge_regressor.predict(X_test_selected)
-    y_pred_elasticnet = elasticnet_regressor.predict(X_test_selected)
+    y_pred_rf = rf_regressor.predict(X_test_selected)
+    y_pred_svr = svr.predict(X_test_selected)
+    y_pred_gb = gb_regressor.predict(X_test_selected)
+    y_pred_knn = knn_regressor.predict(X_test_selected)
 
-    X_meta = np.column_stack((y_pred_lasso, y_pred_ridge, y_pred_elasticnet))
+    X_meta = np.column_stack((y_pred_rf, y_pred_svr, y_pred_gb, y_pred_knn))
 
     meta_regressor = LinearRegression()
     meta_regressor.fit(X_meta, y_test)
@@ -44,28 +50,35 @@ def evaluate(individual, X_train, X_test, y_train, y_test):
 
     return rmse, r2, mre
 
-def runStackingModels():
-    print('\n--Stacking--\n-LinearRegression ,LassoRegression, RidgeRegression, ElasticNet e GradientBoostingRegression-\n')
+def run(X,y):
+    print('Models: Random Forest, SVR, Gradient Boosting, knn\nMetaModel: LinearRegression')
 
+    # split 70/30
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+
+    # random forest
+    rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf_regressor.fit(X_train, y_train)
+
+    # svr
+    svr = SVR(kernel='sigmoid')
+    svr.fit(X_train, y_train)
+
+    # gradientboosting
     gb_regressor = GradientBoostingRegressor()
     gb_regressor.fit(X_train, y_train)
 
-    lasso_regressor = Lasso()
-    lasso_regressor.fit(X_train, y_train)
-
-    ridge_regressor = Ridge()
-    ridge_regressor.fit(X_train, y_train)
-
-    elasticnet_regressor = ElasticNet()
-    elasticnet_regressor.fit(X_train, y_train)
+    # KNN
+    knn_regressor = KNeighborsRegressor(n_neighbors=5)
+    knn_regressor.fit(X_train, y_train)
 
     #previsioni sul set di test
+    y_pred_rf = rf_regressor.predict(X_test)
+    y_pred_svr = svr.predict(X_test)
     y_pred_gb = gb_regressor.predict(X_test)
-    y_pred_lasso = lasso_regressor.predict(X_test)
-    y_pred_ridge = ridge_regressor.predict(X_test)
-    y_pred_elasticnet = elasticnet_regressor.predict(X_test)
+    y_pred_knn = knn_regressor.predict(X_test)
 
-    X_meta = np.column_stack((y_pred_gb, y_pred_lasso, y_pred_ridge, y_pred_elasticnet))
+    X_meta = np.column_stack((y_pred_gb, y_pred_rf, y_pred_svr, y_pred_knn))
 
     meta_regressor = LinearRegression()
     meta_regressor.fit(X_meta, y_test)
@@ -79,7 +92,10 @@ def runStackingModels():
     print('MRE:', np.mean(np.abs(y_test - meta_pred) / y_test) * 100)
     print('-------------------------')
 
-def runFeatureSelection():
+def runFeatureSelection(X,y):
+    # split 70/30
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+
     #inizializzazione DEAP
     creator.create("FitnessMax", base.Fitness, weights=(-1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -95,12 +111,3 @@ def runFeatureSelection():
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     GeneticAlgorithm.runGA(toolbox, X)
-
-#main
-if __name__ == '__main__':
-    seera = pd.read_csv("../datasets/SEERA.csv", delimiter=',', decimal=".")
-    X = seera.drop('Effort', axis=1)
-    y = seera['Effort']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
-    #runFeatureSelection()
-    runStackingModels()

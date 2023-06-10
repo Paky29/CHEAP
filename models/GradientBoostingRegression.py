@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from deap import base, creator, tools
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.model_selection import train_test_split
@@ -23,8 +22,11 @@ def evaluate(individual, X_train, X_test, y_train, y_test):
 
     return rmse, r2, mre
 
-def runGradientBoostingRegression():
-    print('\n--GradientBoostingRegression--')
+def run(X,y):
+    print('GradientBoostingRegression')
+
+    # split 70/30
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
 
     gb_regressor = GradientBoostingRegressor()
     gb_regressor.fit(X_train, y_train)
@@ -35,7 +37,11 @@ def runGradientBoostingRegression():
     print('MRE:', np.mean(np.abs(y_test - y_pred) / y_test) * 100)
     print('-------------------------')
 
-def runFeatureSelection():
+def runFeatureSelection(X,y):
+
+    #split 70/30
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+
     # Inizializzazione DEAP
     creator.create("FitnessMax", base.Fitness, weights=(-1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -51,13 +57,4 @@ def runFeatureSelection():
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     GeneticAlgorithm.runGA(toolbox, X)
-
-#main
-if __name__ == '__main__':
-    seera = pd.read_csv("../datasets/SEERA.csv", delimiter=',', decimal=".")
-    X = seera.drop('Effort', axis=1)
-    y = seera['Effort']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
-
-    runFeatureSelection()
 

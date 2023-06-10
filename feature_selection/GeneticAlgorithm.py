@@ -1,7 +1,6 @@
 import numpy as np
 from deap import tools
 
-#FeatureSelection by GA
 def runGA(toolbox,X):
     population_size = 100
     generations = 100

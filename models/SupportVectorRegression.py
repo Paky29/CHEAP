@@ -26,10 +26,13 @@ def evaluate(individual, X_train, X_test, y_train, y_test):
 
     return rmse, r2, mre
 
-def runSVR():
-    print('\n--SVR (rbf)--')
+def run(X,y):
+    print('SVR [rbf]')
 
-    svr = SVR(kernel='poly', degree=2)
+    # split 70/30
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+
+    svr = SVR(kernel='rbf')
     svr.fit(X_train, y_train)
 
     y_pred = svr.predict(X_test)
@@ -39,7 +42,10 @@ def runSVR():
     print('MRE:', np.mean(np.abs(y_test - y_pred) / y_test) * 100)
     print('-------------------------')
 
-def runFeatureSelection():
+def runFeatureSelection(X,y):
+    # split 70/30
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+
     # Inizializzazione DEAP
     creator.create("FitnessMax", base.Fitness, weights=(-1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -55,12 +61,3 @@ def runFeatureSelection():
     toolbox.register("select", tools.selTournament, tournsize=3)
 
     GeneticAlgorithm.runGA(toolbox, X)
-
-#main
-if __name__ == '__main__':
-    seera = pd.read_csv("../datasets/SEERA.csv", delimiter=',', decimal=".")
-    X = seera.drop('Effort', axis=1)
-    y = seera['Effort']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
-
-    runFeatureSelection()
