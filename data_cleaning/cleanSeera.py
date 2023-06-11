@@ -25,7 +25,6 @@ def defineNaN(seera):
         # Replace missing values with predicted values
         seera.loc[missing_rows, col] = model.predict(seera[complete_cols])[missing_rows]
 
-
 #median-MAD scaling
 def scalingMAD(seera):
     effort = seera['Actual effort']
