@@ -4,7 +4,7 @@ from models import ElasticNet, GradientBoostingRegression, KNearestNeighbors, Ra
     SupportVectorRegression
 
 def main():
-    seera = pd.read_csv("datasets/SEERA_cleaned_outlier.csv", delimiter=',', decimal=".")
+    seera = pd.read_csv("datasets/SEERA_cleaned.csv", delimiter=',', decimal=".")
     X = seera.drop('Effort', axis=1)
     y = seera['Effort']
 

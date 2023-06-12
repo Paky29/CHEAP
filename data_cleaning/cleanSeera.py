@@ -103,9 +103,14 @@ def clean_dataset():
     seera = seera.reset_index(drop=True)
 
     define_NaN(seera)
-    scaling_MAD(seera)
+
     #0.2 because there are not many outliers from our plot
     remove_outliers(seera, 0.2)
+
+    # Change values for different type of user manual in one value for the presence of the user manual
+    seera.loc[seera['User manual'] != 1, 'User manual'] = 2
+
+    scaling_MAD(seera)
 
     save_dataset(seera,"SEERA_cleaned.csv")
     return seera
