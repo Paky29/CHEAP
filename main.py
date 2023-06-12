@@ -4,7 +4,7 @@ from models import ElasticNet, GradientBoostingRegression, KNearestNeighbors, Ra
     SupportVectorRegression
 
 def main():
-    seera = pd.read_csv("datasets/SEERA_cleaned.csv", delimiter=',', decimal=".")
+    seera = pd.read_csv("datasets/SEERA_cleaned_outlier.csv", delimiter=',', decimal=".")
     X = seera.drop('Effort', axis=1)
     y = seera['Effort']
 
@@ -18,7 +18,7 @@ def main():
 
     #LinearRegression_MetaModel.run(X, y)
     #LinearRegression_MetaModel2.run(X, y)
-    LinearRegression_MetaModel3.runFeatureSelection(X, y)
+    LinearRegression_MetaModel3.run(X, y)
 
 if __name__=="__main__":
     main()

@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.preprocessing import RobustScaler
+from sklearn.ensemble import IsolationForest
 import matplotlib.pyplot as plt
 
 # determine the values NaN with regression
-def defineNaN(seera):
+def define_NaN(seera):
     # Select the columns with missing values
     missing_cols = seera.columns[seera.isnull().any()]
 
@@ -24,9 +25,10 @@ def defineNaN(seera):
 
         # Replace missing values with predicted values
         seera.loc[missing_rows, col] = model.predict(seera[complete_cols])[missing_rows]
+        return seera
 
 #median-MAD scaling
-def scalingMAD(seera):
+def scaling_MAD(seera):
     effort = seera['Actual effort']
     seera = seera.drop(['Actual effort'],axis=1)
     x_columns = seera.columns
@@ -38,8 +40,10 @@ def scalingMAD(seera):
 
     seera = pd.DataFrame(scaled_data, columns=x_columns)
     seera['Effort'] = effort
+    return seera
 
-def missingValues(seera):
+#calculate e view the missing values in the dataset
+def missing_values(seera):
     # set style graph
     plt.style.use("ggplot")
 
@@ -57,10 +61,24 @@ def missingValues(seera):
     plt.show()
 
 # Save the modified data to a new CSV file
-def saveDataset(dataset,name):
+def save_dataset(dataset,name):
     dataset.to_csv("../datasets/"+name, index=False)
 
-def cleanDataset():
+#delete outlier
+def remove_outliers(data, contamination):
+    # Create an Isolation Forest model
+    model = IsolationForest(contamination=contamination)
+
+    # Fit the model and predict outliers
+    outliers = model.fit_predict(data)
+
+    # Filter out the outliers from the dataset
+    filtered_data = data[outliers != -1]
+    filtered_data = filtered_data.reset_index(drop=True)
+
+    return filtered_data
+
+def clean_dataset():
     #load original dataset
     seera = pd.read_csv("../datasets/SEERA.csv", delimiter=';', decimal=",")
 
@@ -84,8 +102,10 @@ def cleanDataset():
     seera = seera.drop(69)
     seera = seera.reset_index(drop=True)
 
-    defineNaN(seera)
-    scalingMAD(seera)
+    define_NaN(seera)
+    scaling_MAD(seera)
+    #0.2 because there are not many outliers from our plot
+    remove_outliers(seera, 0.2)
 
-    saveDataset(seera,"SEERA_cleaned.csv")
+    save_dataset(seera,"SEERA_cleaned.csv")
     return seera

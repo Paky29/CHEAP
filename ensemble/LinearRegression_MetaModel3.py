@@ -85,7 +85,7 @@ def evaluate(individual, X, y):
     return mean_rmse, mean_r2, mean_mre
 
 def run(X,y):
-    print('Models: Random Forest, SVR, ElasticNet, GradientBoosting\nMetaModel: LinearRegression')
+    print('Models: Random Forest, SVR, ElasticNet, Knn, GradientBoosting\nMetaModel: LinearRegression')
 
     rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)
     svr = SVR(kernel='sigmoid')
