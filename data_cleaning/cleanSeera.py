@@ -28,7 +28,7 @@ def define_NaN(seera):
         return seera
 
 #median-MAD scaling
-def scaling_MAD(seera):
+def scaling_robust(seera):
     effort = seera['Actual effort']
     seera = seera.drop(['Actual effort'],axis=1)
     x_columns = seera.columns
@@ -62,7 +62,7 @@ def missing_values(seera):
 
 # Save the modified data to a new CSV file
 def save_dataset(dataset,name):
-    dataset.to_csv("../datasets/"+name, index=False)
+    dataset.to_csv("datasets/"+name, index=False)
 
 #delete outlier
 def remove_outliers(data, contamination):
