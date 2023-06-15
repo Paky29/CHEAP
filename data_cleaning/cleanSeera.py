@@ -110,7 +110,7 @@ def clean_dataset():
     # Change values for different type of user manual in one value for the presence of the user manual
     seera.loc[seera['User manual'] != 1, 'User manual'] = 2
 
-    scaling_MAD(seera)
+    scaling_robust(seera)
 
     save_dataset(seera,"SEERA_cleaned.csv")
     return seera
