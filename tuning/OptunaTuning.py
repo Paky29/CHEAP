@@ -17,14 +17,7 @@ def objective(trial):
     X = seera.drop('Effort', axis=1)
     y = seera['Effort']
 
-    selected_features = ['Estimated  duration', 'Government policy impact',
-                         'Developer incentives policy ', 'Developer training', 'Development team management',
-                         'Top management opinion of previous system', 'User resistance',
-                         ' Users stability ', ' Requirements flexibility ',
-                         'Project manager experience', 'Precedentedness', 'Software tool experience', 'Team size',
-                         'Team cohesion', 'Schedule quality', 'Development environment adequacy',
-                         'Tool availability ', 'DBMS used', 'Technical stability', 'Degree of software reuse ',
-                         ' Process reengineering ']
+    selected_features = ['Organization type', 'Size of IT department', 'Development type', 'Estimated effort', 'Developer incentives policy ', 'Developer training', 'Top management support', 'Top management opinion of previous system', 'User computer experience', ' Users stability ', ' Requirements flexibility ', 'Project manager experience', 'DBMS  expert availability', 'Precedentedness', 'Team selection', 'Team size', 'Tool availability ', 'Programming language used', 'DBMS used', 'Technical stability', 'Degree of software reuse ', 'Use of standards', ' Process reengineering ', 'Required reusability', 'Performance requirements', 'Product complexity', 'Security requirements']
 
     if feature_selection:
         X_selected = X[selected_features]
@@ -39,24 +32,28 @@ def objective(trial):
     r2_scores = []
     mre_scores = []
 
-    max_depth_rf = trial.suggest_int("rf_max_depth", 2, 64, log=True)
-    min_samples_split = trial.suggest_float("rf_min_sample_split", 0, 1)
-    n_estimators_rf = trial.suggest_int("rf_n_estimators", 10, 1000)
+    max_depth_rf = trial.suggest_int("rf_max_depth", 2, 10)
+    min_samples_split = trial.suggest_float("rf_min_samples_split", 0.01, 0.5)
+    n_estimators_rf = trial.suggest_int("rf_n_estimators", 100, 1000)
 
-    C = trial.suggest_float("svr_C", 0.01, 1000)
-    epsilon = trial.suggest_float("svr_epsilon", 0.1, 2)
-    gamma = trial.suggest_float("svr_gamma", 0.01, 1.0)
-    kernel = trial.suggest_categorical("svr_kernel", ['linear', 'poly', 'rbf'])
+    # SVR
+    C = trial.suggest_float("svr_C", 0.1, 5.0)
+    epsilon = trial.suggest_float("svr_epsilon", 0.01, 0.5)
+    gamma = trial.suggest_float("svr_gamma", 0.001, 0.1)
+    kernel = trial.suggest_categorical("svr_kernel", ['linear', 'rbf', 'sigmoid'])
 
-    n_neighbors = trial.suggest_int("knn_n_neighbors", 1, 10)
-    leaf_size = trial.suggest_int("knn_leaf_size", 10, 100)
+    # KNN
+    n_neighbors = trial.suggest_int("knn_n_neighbors", 3, 10)
+    leaf_size = trial.suggest_int("knn_leaf_size", 10, 50)
     weights = trial.suggest_categorical("knn_weights", ['uniform', 'distance'])
 
-    alpha = trial.suggest_float("en_alpha", 0, 1)
-    l1_ratio = trial.suggest_float("en_l1_ratio", 0, 1)
+    # ElasticNet
+    alpha = trial.suggest_float("en_alpha", 0.01, 1.0)
+    l1_ratio = trial.suggest_float("en_l1_ratio", 0.1, 1.0)
 
+    # Gradient Boosting
     learning_rate = trial.suggest_float("gb_learning_rate", 0.01, 0.1)
-    n_estimators_gb = trial.suggest_int("gb_n_estimators", 10, 1000)
+    n_estimators_gb = trial.suggest_int("gb_n_estimators", 100, 1000)
 
     # Suddivisione dei dati utilizzando la k-fold cross-validation
     for train_indices, test_indices in kfold.split(X_selected):
@@ -67,7 +64,7 @@ def objective(trial):
 
         # Random Forest
         rf_regressor = RandomForestRegressor(
-            n_estimators=n_estimators_rf,
+            n_estimators=100,
             max_depth=max_depth_rf,
             min_samples_split=min_samples_split,
             random_state=42
@@ -101,7 +98,7 @@ def objective(trial):
 
         # KNN
         knn_regressor = KNeighborsRegressor(
-            n_neighbors=n_neighbors,
+            n_neighbors=5,
             leaf_size=leaf_size,
             weights=weights
         )
@@ -142,22 +139,35 @@ def objective(trial):
     print('MRE:', mean_mre)
     print('-------------------------')
 
-    return mean_mre
+    return mean_mre, mean_r2, mean_rmse
 
 
 def optuna_tuning():
-    study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=50)
-    trial = study.best_trial
-    print("Best Score: ", trial.value)
-    print("Best Params: ")
-    for key, value in trial.params.items():
-        print("  {}: {}".format(key, value))
+    study = optuna.create_study(directions=["minimize", "maximize", "minimize"])
+    study.optimize(objective, n_trials=40)
+    trials = study.best_trials
+    for trial in trials:
+        print("Best Score: ", trial.values)
+        print("Best Params: ")
+        for key, value in trial.params.items():
+            print("  {}: {}".format(key, value))
 
-    plot = optuna.visualization.plot_param_importances(study)
+    plot_mre = optuna.visualization.plot_param_importances(study, target=lambda t: t.values[0], target_name="mean_mre")
 
-    plot2 = optuna.visualization.plot_optimization_history(study)
+    plot2_mre = optuna.visualization.plot_optimization_history(study, target=lambda t: t.values[0], target_name="mean_mre")
 
-    plot.show()
-    plot2.show()
+    plot_r2 = optuna.visualization.plot_param_importances(study, target=lambda t: t.values[1], target_name="mean_r2")
+
+    plot2_r2 = optuna.visualization.plot_optimization_history(study, target=lambda t: t.values[1], target_name="mean_r2")
+
+    plot_rmse = optuna.visualization.plot_param_importances(study, target=lambda t: t.values[2], target_name="mean_rmse")
+
+    plot2_rmse = optuna.visualization.plot_optimization_history(study, target=lambda t: t.values[2], target_name="mean_rmse")
+
+    plot_mre.show()
+    plot2_mre.show()
+    plot_r2.show()
+    plot2_r2.show()
+    plot_rmse.show()
+    plot2_rmse.show()
     plt.show()

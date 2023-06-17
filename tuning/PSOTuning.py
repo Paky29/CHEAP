@@ -21,14 +21,14 @@ def obj_fun(params):
     X = seera.drop('Effort', axis=1)
     y = seera['Effort']
 
-    selected_features = ['Estimated  duration', 'Government policy impact',
-                         'Developer incentives policy ', 'Developer training', 'Development team management',
-                         'Top management opinion of previous system', 'User resistance',
-                         ' Users stability ', ' Requirements flexibility ',
-                         'Project manager experience', 'Precedentedness', 'Software tool experience', 'Team size',
-                         'Team cohesion', 'Schedule quality', 'Development environment adequacy',
-                         'Tool availability ', 'DBMS used', 'Technical stability', 'Degree of software reuse ',
-                         ' Process reengineering ']
+    selected_features = ['Organization type', 'Customer organization type', 'Estimated  duration', 'Application domain',
+                         'Government policy impact', 'Organization management structure clarity',
+                         'Developer hiring policy', 'Developer training', 'Development team management',
+                         ' Requirements flexibility ', 'Project manager experience', 'DBMS  expert availability',
+                         'Precedentedness', 'Software tool experience', 'Team size', 'Daily working hours',
+                         'Team contracts', 'Schedule quality', 'Degree of risk management',
+                         'Requirement accuracy level', 'User manual', 'Required reusability', 'Product complexity',
+                         'Security requirements', 'Specified H/W']
 
     if feature_selection:
         X_selected = X[selected_features]
@@ -49,22 +49,20 @@ def obj_fun(params):
     C = float(params[3])
     epsilon = float(params[4])
     gamma = float(params[5])
-    kernel = ['linear', 'poly', 'rbf'][int(params[6])]
-    n_neighbors = int(params[7])
-    leaf_size = int(params[8])
-    weights = ['uniform', 'distance'][int(params[9])]
-    alpha = float(params[10])
-    l1_ratio = float(params[11])
-    learning_rate = float(params[12])
-    n_estimators_gb = int(params[13])
+    n_neighbors = int(params[6])
+    leaf_size = int(params[7])
+    weights = ['uniform', 'distance'][int(params[8])]
+    alpha = float(params[9])
+    l1_ratio = float(params[10])
+    learning_rate = float(params[11])
+    n_estimators_gb = int(params[12])
 
     print('')
     print('Launched the iteration with ')
     print("max_depth_rf:", int(params[0]), "min_samples_split:", float(params[1]), "n_estimators_rf:", int(params[2]),
-          "C:", float(params[3]), "epsilon:", float(params[4]), "gamma:", float(params[5]), "kernel:",
-          ['linear', 'poly', 'rbf'][int(params[6])], "n_neighbors:", int(params[7]), "leaf_size:", int(params[8]),
-          "weights:", ['uniform', 'distance'][int(params[9])], "alpha:", float(params[10]), "l1_ratio:",
-          float(params[11]), "learning_rate:", float(params[12]), "n_estimators_gb:", int(params[13]))
+          "C:", float(params[3]), "epsilon:", float(params[4]), "gamma:", float(params[5]), "n_neighbors:", int(params[6]), "leaf_size:", int(params[7]),
+          "weights:", ['uniform', 'distance'][int(params[8])], "alpha:", float(params[9]), "l1_ratio:",
+          float(params[10]), "learning_rate:", float(params[11]), "n_estimators_gb:", int(params[12]))
 
     # Suddivisione dei dati utilizzando la k-fold cross-validation
     for train_indices, test_indices in kfold.split(X_selected):
@@ -94,7 +92,7 @@ def obj_fun(params):
             C=C,
             epsilon=epsilon,
             gamma=gamma,
-            kernel=kernel
+            kernel='sigmoid'
         )
         svr.fit(X_train, y_train)
 
@@ -145,17 +143,13 @@ def obj_fun(params):
     mean_r2 = np.mean(r2_scores)
     mean_mre = np.mean(mre_scores)
 
-    normalized_rmse = mean_rmse / (mean_r2 + mean_mre)
-
-    balanced_function = - mean_r2 + mean_mre + normalized_rmse
-
-    return balanced_function
+    return - mean_r2 + mean_mre + mean_rmse
 
 
 def pso_tuning():
     # Bounds for parameters space
-    lb = [2, 0.1, 10, 0.01, 0.1, 0.01, 0, 1, 10, 0, 0, 0, 0.01, 10]
-    ub = [64, 1.0, 1000, 1000, 2, 1.0, 2, 10, 100, 1, 1, 1, 0.1, 1000]
+    lb = [2, 0.1, 10, 0.01, 0.1, 0.01, 1, 10, 0, 0, 0, 0.01, 10]
+    ub = [64, 1.0, 1000, 1000, 2, 1.0, 10, 100, 1, 1, 1, 0.1, 1000]
 
     # Run the optimization
     xopt, fopt = pso(obj_fun, lb, ub, swarmsize=20, maxiter=40, debug=True)
@@ -170,14 +164,13 @@ def pso_tuning():
         'C': float(xopt[3]),
         'epsilon': float(xopt[4]),
         'gamma': float(xopt[5]),
-        'kernel': ['linear', 'poly', 'rbf'][int(xopt[6])],
-        'n_neighbors': int(xopt[7]),
-        'leaf_size': int(xopt[8]),
-        'weights': ['uniform', 'distance'][int(xopt[9])],
-        'alpha': float(xopt[10]),
-        'l1_ratio': float(xopt[11]),
-        'learning_rate': float(xopt[12]),
-        'n_estimators_gb': int(xopt[13])
+        'n_neighbors': int(xopt[6]),
+        'leaf_size': int(xopt[7]),
+        'weights': ['uniform', 'distance'][int(xopt[8])],
+        'alpha': float(xopt[9]),
+        'l1_ratio': float(xopt[10]),
+        'learning_rate': float(xopt[11]),
+        'n_estimators_gb': int(xopt[12])
     }
 
     return algo_params
