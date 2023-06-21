@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import numpy as np
 from sklearn.tree import DecisionTreeRegressor
@@ -29,8 +31,18 @@ def define_NaN(seera):
 
 #median-MAD scaling
 def scaling_robust(seera):
-    effort = seera['Actual effort']
-    seera = seera.drop(['Actual effort'],axis=1)
+    isEffort = False
+    if 'Actual effort' in seera.columns:
+        effort = seera['Actual effort']
+        seera = seera.drop(['Actual effort'],axis=1)
+        isEffort = True
+
+    isIndex = False
+    if 'Indice Progetto' in seera.columns:
+        indici = seera['Indice Progetto']
+        seera = seera.drop('Indice Progetto',axis = 1)
+        isIndex = True
+
     x_columns = seera.columns
     # Create an instance of the RobustScaler
     scaler = RobustScaler()
@@ -39,7 +51,10 @@ def scaling_robust(seera):
     scaled_data = scaler.fit_transform(seera)
 
     seera = pd.DataFrame(scaled_data, columns=x_columns)
-    seera['Effort'] = effort
+    if isEffort:
+        seera['Actual effort'] = effort
+    if isIndex:
+        seera.insert(0, 'Indice Progetto', indici)
     return seera
 
 #calculate e view the missing values in the dataset
@@ -62,7 +77,10 @@ def missing_values(seera):
 
 # Save the modified data to a new CSV file
 def save_dataset(dataset,name):
-    dataset.to_csv("datasets/"+name, index=False)
+    filename = "datasets/"+name
+    if os.path.exists(filename):
+        os.remove(filename)
+    dataset.to_csv(filename, index=False)
 
 #delete outlier
 def remove_outliers(data, contamination):
@@ -77,6 +95,10 @@ def remove_outliers(data, contamination):
     filtered_data = filtered_data.reset_index(drop=True)
 
     return filtered_data
+
+def feature_selection(seera):
+    seera = seera[['Organization type', 'Customer organization type', 'Estimated  duration', 'Application domain', 'Government policy impact', 'Organization management structure clarity', 'Developer hiring policy', 'Developer training', 'Development team management', ' Requirements flexibility ', 'Project manager experience', 'DBMS  expert availability', 'Precedentedness', 'Software tool experience', 'Team size', 'Daily working hours', 'Team contracts', 'Schedule quality', 'Degree of risk management', 'Requirement accuracy level', 'User manual', 'Required reusability', 'Product complexity', 'Security requirements', 'Specified H/W', 'Actual effort']]
+    return seera
 
 def clean_dataset():
     #load original dataset
@@ -111,6 +133,10 @@ def clean_dataset():
     seera.loc[seera['User manual'] != 1, 'User manual'] = 2
 
     scaling_robust(seera)
+
+    feature_selection(seera)
+
+    #seera.insert(0, 'Indice Progetto', seera.index)
 
     save_dataset(seera,"SEERA_cleaned.csv")
     return seera
