@@ -76,7 +76,8 @@ def retraining(request:RealEffort):
     save_dataset(seera, "SEERA_retrain.csv")
 
     #seera.drop('Indice Progetto', axis=1)
-    seera.dropna(subset=['Actual effort'])
+    seera = seera.dropna(subset=['Actual effort'])
+    seera = seera.reset_index(drop=True)
     seera = scaling_robust(seera)
 
     save_dataset(seera,'SEERA_train.csv')
