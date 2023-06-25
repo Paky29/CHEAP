@@ -121,6 +121,9 @@ def predict():
     print(json_data)
     client.chat_postMessage(channel=channel_id, text=json_string)'''
 
+    print("Predict_input_data:")
+    print(input_data)
+
 
     seera = pd.read_csv("datasets/SEERA_retrain_try.csv", delimiter=',', decimal=".")
     print(seera)
@@ -177,6 +180,9 @@ def retraining():
     print(feature_list)
     # Extract only the values from the name-value pairs and convert them to integers
     input_data = [(feature.split(":")[1].strip()) for feature in feature_list]
+
+    print("Update_input_data:")
+    print(input_data)
 
     index = float(input_data[0])
     real_effort = round(float(input_data[1]), 1)
