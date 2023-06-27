@@ -1,13 +1,18 @@
 import numpy as np
 import pandas as pd
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR
-
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import ElasticNet
+import time
+import datetime
+
+import warnings
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
 
 class Ensemble:
@@ -18,22 +23,33 @@ class Ensemble:
         self.y_test = None
         self.k = 10
 
-    def load_data(self):
-        seera = pd.read_csv("datasets/SEERA_train.csv", delimiter=',', decimal=".")
-        X = seera.drop(['Indice Progetto','Actual effort'],axis=1)
-        y = seera['Actual effort']
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.2, random_state=23)
-        print(self.X_train.iloc[0:12,:])
+        self.X = None
+        self.y = None
 
-    def StackingClassifier(self):
+        self.mre = None
+        self.rmse = None
+        self.r2 = None
+
+    def printMetrics(self):
+        print("-------------------------------")
+        print(f"Test RMSE: {self.rmse}")
+        print(f"Test MRE: {self.mre}")
+        print(f"Test R2: {self.r2}")
+        print("-------------------------------")
+
+    def load_data(self):
+        seera = pd.read_csv("../../datasets/SEERA_train.csv", delimiter=',', decimal=".")
+        self.X = seera.drop(['Indice Progetto','Actual effort'],axis=1)
+        #X = seera[['Customer organization type', 'Estimated  duration', 'Organization management structure clarity', 'Developer hiring policy', 'Project manager experience', 'Team size', 'Degree of risk management', 'Required reusability']]
+        self.y = seera['Actual effort']
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=23)
+
+    def StackingRegressor(self):
 
         rf_regressor = RandomForestRegressor(max_depth=16, min_samples_split=0.1810111262255957, n_estimators=108)
         svr = SVR(C=85.31509250743692, epsilon=0.8345275221470401, gamma=0.010112870522012395, kernel='rbf')
-
         elasticnet_regressor = ElasticNet(alpha=0.729511921784814, l1_ratio=0.46870792837162806)
-
         knn_regressor = KNeighborsRegressor(n_neighbors=5, leaf_size=21, weights='uniform')
-
         gb_regressor = GradientBoostingRegressor(learning_rate=0.021383363768917734, n_estimators=154)
 
         # Define weak learners
@@ -43,7 +59,7 @@ class Ensemble:
                          ('gb', gb_regressor),
                          ('en', elasticnet_regressor)]
 
-        # Final learner or meta model
+        # Final learner or metamodel
         final_learner = MLPRegressor(random_state=1, max_iter=500)
 
         train_meta_model = None
@@ -80,13 +96,15 @@ class Ensemble:
         # Training level 1
         self.train_level_1(final_learner, train_meta_model, test_meta_model)
 
+        ensemble.printMetrics()
+
     def k_fold_cross_validation(self, clf):
 
         predictions_clf = None
 
         # Number of samples per fold
         batch_size = int(len(self.X_train) / self.k)
-        print(batch_size)
+        #print(batch_size)
 
         # Stars k-fold cross validation
         for fold in range(self.k):
@@ -132,25 +150,23 @@ class Ensemble:
         return y_pred
 
     def train_level_1(self, final_learner, train_meta_model, test_meta_model):
-        # Train is carried out with final learner or meta model
+        # Train is carried out with final learner or metamodel
         final_learner.fit(train_meta_model, self.y_train)
         # Getting train and test accuracies from meta_model
 
         predictions = final_learner.predict(test_meta_model)
 
         # Calcolo delle misure di performance
-        rmse = np.sqrt(mean_squared_error(self.y_test, predictions))
-        r2 = r2_score(self.y_test, predictions)
-        mre = np.mean(np.abs(self.y_test - predictions) / self.y_test) * 100
-
-        print(f"Test rmse: {rmse}")
-        print(f"Test mre: {mre}")
-        print(f"Test r2_nostro: {r2}")
-        print(f"Train r2: {final_learner.score(train_meta_model, self.y_train)}")
-        print(f"Test r2: {final_learner.score(test_meta_model, self.y_test)}")
+        self.rmse = np.sqrt(mean_squared_error(self.y_test, predictions))
+        self.r2 = r2_score(self.y_test, predictions)
+        self.mre = np.mean(np.abs(self.y_test - predictions) / self.y_test) * 100
 
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     ensemble = Ensemble()
     ensemble.load_data()
-    ensemble.StackingClassifier()
+    ensemble.StackingRegressor()
+
+    print("Execution time:", str(datetime.timedelta(seconds=time.time() - start_time)))
