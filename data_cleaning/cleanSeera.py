@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import numpy as np
+from sklearn.impute import KNNImputer
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.preprocessing import RobustScaler
 from sklearn.ensemble import IsolationForest
@@ -9,25 +10,14 @@ import matplotlib.pyplot as plt
 
 # determine the values NaN with regression
 def define_NaN(seera):
-    # Select the columns with missing values
-    missing_cols = seera.columns[seera.isnull().any()]
+    # Crea un oggetto KNNImputer
+    imputer = KNNImputer(n_neighbors=2)
 
-    # Perform regression imputation for each column with missing values
-    for col in missing_cols:
-        # Select the complete columns for the regression
-        complete_cols = list(set(seera.columns) - set(missing_cols) - set([col]))
+    # Applica l'imputazione ai dati
+    X_imputed = imputer.fit_transform(seera)
 
-        # Split the data into complete and missing rows for the column
-        complete_rows = seera.dropna(subset=[col])
-        missing_rows = seera[col].isnull()
-
-        # Fit a linear regression model
-        model = DecisionTreeRegressor()
-        model.fit(complete_rows[complete_cols], complete_rows[col])
-
-        # Replace missing values with predicted values
-        seera.loc[missing_rows, col] = model.predict(seera[complete_cols])[missing_rows]
-        return seera
+    # Trasforma l'array NumPy in un DataFrame mantenendo i nomi delle colonne
+    seera = pd.DataFrame(X_imputed, columns=seera.columns)
 
 #median-MAD scaling
 def scaling_robust(seera):
@@ -127,7 +117,7 @@ def clean_dataset():
     define_NaN(seera)
 
     #0.2 because there are not many outliers from our plot
-    remove_outliers(seera, 0.2)
+    remove_outliers(seera, 0.1)
 
     # Change values for different type of user manual in one value for the presence of the user manual
     seera.loc[seera['User manual'] != 1, 'User manual'] = 2
