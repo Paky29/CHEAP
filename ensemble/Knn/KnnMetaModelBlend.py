@@ -1,13 +1,21 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import smogn
 from sklearn.linear_model import ElasticNet
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import RobustScaler, StandardScaler
 from sklearn.preprocessing import MinMaxScaler
+from xgboost import XGBRegressor
 from sklearn.svm import SVR
+from sklearn.feature_selection import SelectKBest, f_regression, SequentialFeatureSelector, RFE, SelectFromModel
 from sklearn.neighbors import KNeighborsRegressor
 
 class Ensemble:
@@ -50,12 +58,12 @@ class Ensemble:
 
 
     def load_data(self):
-        seera = pd.read_csv("SEERA_retrain_tony.csv", delimiter=',', decimal=".")
+        seera = pd.read_csv("../../datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
         self.y = seera['Actual effort']
         #self.X = seera.drop('Actual effort',axis = 1)
         self.X = seera[['Customer organization type', 'Estimated  duration', 'Application domain', 'Government policy impact',
           'Organization management structure clarity', 'Developer training', 'Development team management',
-          'Top management support', 'Top management opinion of previous system', 'User resistance',
+          'Top management support', 'Top management opinion of previous system',
           ' Requirements flexibility ', 'Consultant availability', 'DBMS  expert availability',
           'Software tool experience', 'Team size', 'Team contracts', 'Development environment adequacy',
           'Tool availability ', 'DBMS used', 'Degree of software reuse ', 'Degree of risk management',
@@ -67,11 +75,10 @@ class Ensemble:
         self.X_bal, self.y_bal = self.data_balancing(self.X_train, self.y_train)
 
     def BlendingRegressor(self):
-        rf_regressor = RandomForestRegressor()
-        ada = AdaBoostRegressor(n_estimators=78, learning_rate=0.011444827305475122, loss='exponential')
-        elastic = ElasticNet(alpha=0.9844970636892896, l1_ratio=0.10523697586301965, selection='random',
-                             tol=0.0009844912834425824)
-        svr = SVR(C=4.986086586865859, epsilon=0.025578671993318654, gamma=0.029267910098574566, kernel='linear')
+        rf_regressor = RandomForestRegressor(max_depth=67, max_features=1.0, n_estimators=67)
+        ada = AdaBoostRegressor(learning_rate=0.05984073241086173, n_estimators=77)
+        elastic = ElasticNet(alpha=0.9844970636892896, l1_ratio=0.10523697586301965, selection='random', tol=0.0009844912834425824)
+        svr = SVR(C=4.973571744211175, epsilon=0.24236503269448004, gamma=0.06602126901315636, kernel='linear')
 
         # Define weak learners
         weak_learners = [
@@ -81,11 +88,10 @@ class Ensemble:
             ('en', elastic)
         ]
 
-        final_learner = make_pipeline(MinMaxScaler(),KNeighborsRegressor(n_neighbors=11, leaf_size=5, weights='distance', p=1))
+        final_learner = make_pipeline(MinMaxScaler(),KNeighborsRegressor(n_neighbors = 11, leaf_size = 22, weights = 'distance', p = 2))
 
         train_meta_model = None
         test_meta_model = None
-
 
         # Start stacking
         for clf_id, clf in weak_learners:
