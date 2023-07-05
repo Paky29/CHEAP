@@ -1,5 +1,4 @@
 import os
-
 import pandas as pd
 import numpy as np
 from sklearn.impute import KNNImputer
@@ -8,7 +7,7 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.ensemble import IsolationForest
 import matplotlib.pyplot as plt
 
-# determine the values NaN with regression
+# determine the values NaN with Knn
 def define_NaN(seera):
     # Crea un oggetto KNNImputer
     imputer = KNNImputer(n_neighbors=2)
@@ -19,32 +18,6 @@ def define_NaN(seera):
     # Trasforma l'array NumPy in un DataFrame mantenendo i nomi delle colonne
     seera = pd.DataFrame(X_imputed, columns=seera.columns)
 
-#median-MAD scaling
-def scaling_robust(seera):
-    isEffort = False
-    if 'Actual effort' in seera.columns:
-        effort = seera['Actual effort']
-        seera = seera.drop(['Actual effort'],axis=1)
-        isEffort = True
-
-    isIndex = False
-    if 'Indice Progetto' in seera.columns:
-        indici = seera['Indice Progetto']
-        seera = seera.drop('Indice Progetto',axis = 1)
-        isIndex = True
-
-    x_columns = seera.columns
-    # Create an instance of the RobustScaler
-    scaler = RobustScaler()
-
-    # Fit the scaler to the data and transform it
-    scaled_data = scaler.fit_transform(seera)
-
-    seera = pd.DataFrame(scaled_data, columns=x_columns)
-    if isEffort:
-        seera['Actual effort'] = effort
-    if isIndex:
-        seera.insert(0, 'Indice Progetto', indici)
     return seera
 
 #calculate e view the missing values in the dataset
@@ -87,8 +60,21 @@ def remove_outliers(data, contamination):
     return filtered_data
 
 def feature_selection(seera):
-    seera = seera[['Organization type', 'Customer organization type', 'Estimated  duration', 'Application domain', 'Government policy impact', 'Organization management structure clarity', 'Developer hiring policy', 'Developer training', 'Development team management', ' Requirements flexibility ', 'Project manager experience', 'DBMS  expert availability', 'Precedentedness', 'Software tool experience', 'Team size', 'Daily working hours', 'Team contracts', 'Schedule quality', 'Degree of risk management', 'Requirement accuracy level', 'User manual', 'Required reusability', 'Product complexity', 'Security requirements', 'Specified H/W', 'Actual effort']]
+    seera = seera[['Customer organization type', 'Estimated  duration', 'Application domain', 'Government policy impact',
+          'Organization management structure clarity', 'Developer training', 'Development team management',
+          'Top management support', 'Top management opinion of previous system',
+          ' Requirements flexibility ', 'Consultant availability', 'DBMS  expert availability',
+          'Software tool experience', 'Team size', 'Team contracts', 'Development environment adequacy',
+          'Tool availability ', 'DBMS used', 'Degree of software reuse ', 'Degree of risk management',
+          'Requirement accuracy level', 'Technical documentation', 'Required reusability', 'Performance requirements',
+          'Reliability requirements','Actual effort']]
     return seera
+
+def pearson_correlation(seera):
+    correlation_matrix = seera.corr(method='pearson')
+
+    # Display the correlation matrix
+    print(correlation_matrix)
 
 def clean_dataset():
     #load original dataset
@@ -103,30 +89,29 @@ def clean_dataset():
     #estimated size e degree of standards usage have too many NaN values
     seera = seera.drop(['Year of project','ProjID','Organization id','Role in organization','Actual duration','Size of organization','% project gain (loss)','Other sizing method','Economic instability impact','Clarity of manual system',' Requirment stability ','Team continuity ','Income satisfaction','# Multiple programing languages ','Level of outsourcing','Outsourcing impact','Comments within the code','Estimated size','Dedicated team members','Degree of standards usage'], axis=1)
 
+    # alta correlazione di Pearson con Team size e Program capability
+    seera = seera.drop(['Estimated effort', 'Analysts capability '], axis=1)
+
     #replace '?' value with NaN value
     old_value = '?'
     new_value = np.nan
     seera.replace(old_value, new_value, inplace=True)
 
-    #missingValues(seera)
-
     #drop row 69, too many NaN values
     seera = seera.drop(69)
     seera = seera.reset_index(drop=True)
 
-    define_NaN(seera)
+    seera = define_NaN(seera)
 
-    #0.2 because there are not many outliers from our plot
+    #0.1 because there are not many outliers from our plot
     remove_outliers(seera, 0.1)
 
     # Change values for different type of user manual in one value for the presence of the user manual
     seera.loc[seera['User manual'] != 1, 'User manual'] = 2
 
-    scaling_robust(seera)
-
     feature_selection(seera)
 
-    #seera.insert(0, 'Indice Progetto', seera.index)
+    seera.insert(0, 'Indice Progetto', seera.index)
 
-    save_dataset(seera,"SEERA_cleaned.csv")
+    save_dataset(seera,"SEERA_train.csv")
     return seera

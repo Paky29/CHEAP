@@ -68,33 +68,29 @@ class Ensemble:
         print("-------------------------------")
 
     def load_data(self):
-        seera = pd.read_csv("../../datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
+        seera = pd.read_csv("../../datasets/SEERA_train.csv", delimiter=',', decimal=".")
         seera.drop("Indice Progetto",axis=1)
         self.X = seera.drop(['Actual effort'], axis=1)
         self.y = seera['Actual effort']
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=0.15,
                                                                                 random_state=23)
 
-    def StackingClassifier(self):
+    def StackingRegressor(self):
 
         rf_regressor = RandomForestRegressor()
-        gb_regressor = GradientBoostingRegressor()
-        linear = LinearRegression()
-        decision_tree = DecisionTreeRegressor()
+        #gb_regressor = GradientBoostingRegressor()
+        #linear = LinearRegression()
         ada = AdaBoostRegressor(n_estimators = 78, learning_rate = 0.011444827305475122, loss= 'exponential')
-        xgb = XGBRegressor(colsample_bytree=0.41470186669055753, gamma=0.06493204581815717, learning_rate=0.028343176856406638, max_depth=3, n_estimators=630, min_child_weight=1, subsample = 0.876091138265439, reg_lambda = 0.40025015210995907)
+        #xgb = XGBRegressor(colsample_bytree=0.41470186669055753, gamma=0.06493204581815717, learning_rate=0.028343176856406638, max_depth=3, n_estimators=630, min_child_weight=1, subsample = 0.876091138265439, reg_lambda = 0.40025015210995907)
         elastic = ElasticNet(alpha=0.9844970636892896, l1_ratio=0.10523697586301965,selection='random', tol=0.0009844912834425824)
         svr = SVR(C=4.986086586865859, epsilon=0.025578671993318654,gamma=0.029267910098574566, kernel='linear')
-        lars = make_pipeline(RobustScaler(),Lars(n_nonzero_coefs=3))
+        #lars = make_pipeline(RobustScaler(),Lars(n_nonzero_coefs=3))
         # Define weak learners
         weak_learners = [
             ('rf', rf_regressor),
-            #('gb', gb_regressor),
             ('ada', ada),
             ('svr',svr),
-            #('lars',lars),
-            ('en', elastic),
-            #('xgb', xgb)
+            ('en', elastic)
         ]
 
         final_learner = make_pipeline(MinMaxScaler(feature_range=(-1,1)),KNeighborsRegressor(n_neighbors=7))
@@ -217,4 +213,4 @@ class Ensemble:
 if __name__ == "__main__":
     ensemble = Ensemble()
     ensemble.load_data()
-    ensemble.StackingClassifier()
+    ensemble.StackingRegressor()

@@ -9,10 +9,8 @@ from dotenv import load_dotenv
 from flask import Flask, request, Response
 from slackeventsapi import SlackEventAdapter
 from joblib import load
-
-
-from data_cleaning.cleanSeera import save_dataset, scaling_robust
-from ensemble import LinearRegression_MetaModel3
+from data_cleaning.cleanSeera import save_dataset
+from ensemble.Knn.KnnMetaModelBlend import Ensemble
 
 env_path = Path('./bot/') / '.env'
 load_dotenv(dotenv_path=env_path)
@@ -22,18 +20,6 @@ slack_event_adapter = SlackEventAdapter(os.environ['SIGNING_SECRET'], '/slack/ev
 
 client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
 BOT_ID = client.api_call("auth.test")['user_id']
-
-@slack_event_adapter.on('message')
-def message(payload):
-    event = payload.get('event', {})
-    channel_id = event.get('channel')
-    user_id = event.get('user')
-    text = event.get('text')
-
-    if user_id != BOT_ID:
-        if text == "Info":
-            response = "Elenco feature\n-User Manual\n-Project Manager experience\n-Team size\n-H\\W"
-            #client.chat_postMessage(channel=channel_id, text=response)
 
 @app.route('/show-params', methods=['POST'])
 def show_params():
@@ -101,7 +87,7 @@ def print_format():
     data = request.form
     channel_id = data.get('channel_id')
     print(data)
-    response = 'Organization type: X, Customer organization type: X, Estimated duration: X, Application domain: X, Government policy impact: X, Organization management structure clarity: X, Developer hiring policy: X, Developer training: X, Development team management: X, Requirements flexibility: X, Project manager experience: X, DBMS expert availability: X, Precedentedness: X, Software tool experience: X, Team size: X, Daily working hours: X, Team contracts: X, Schedule quality: X, Degree of risk management: X, Requirement accuracy level: X, User manual: X, Required reusability: X, Product complexity: X, Security requirements: X, Specified H/W: X'
+    response = "Customer organization type: X, Estimated duration: X, Application domain: X, Government policy impact: X, Organization management structure clarity: X, Developer training: X, Development team management: X, Top management support: X, Top management opinion of previous system: X, Requirements flexibility: X, Consultant availability: X, DBMS expert availability: X, Software tool experience: X, Team size: X, Team contracts: X, Development environment adequacy: X, Tool availability: X, DBMS used: X, Degree of software reuse: X, Degree of risk management: X, Requirement accuracy level: X, Technical documentation: X, Required reusability: X, Performance requirements: X, Reliability requirements: X"
     client.chat_postMessage(channel=channel_id, text=response)
     return Response(), 200
 
@@ -133,45 +119,42 @@ def predict():
     print("Predict_input_data:")
     print(input_data)
 
-
-    seera = pd.read_csv("datasets/SEERA_retrain_try.csv", delimiter=',', decimal=".")
+    seera = pd.read_csv("datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
     print(seera)
     last_row_index = seera['Indice Progetto'].max() + 1
+
+    rf_regressor = load("models_saved/rf_regressor.joblib")
+    svr = load("models_saved/svr_regressor.joblib")
+    ada_regressor = load("models_saved/ada_regressor.joblib")
+    elasticnet_regressor = load("models_saved/en_regressor.joblib")
+    meta_regressor = load("models_saved/meta_regressor.joblib")
+
+    y_pred_rf = rf_regressor.predict(input_data)
+    y_pred_svr = svr.predict(input_data)
+    y_pred_ada = ada_regressor.predict(input_data)
+    y_pred_elastic = elasticnet_regressor.predict(input_data)
+
+    X_meta = np.column_stack((y_pred_rf, y_pred_ada, y_pred_svr, y_pred_elastic))
+    meta_regressor = load('models_saved/meta_regressor.joblib')
+    prediction = meta_regressor.predict(X_meta)
+
+    print(prediction)
+
+    # response = {'index': last_row_index, 'prediction': prediction.tolist()[0]}
+
+    response = "The estimated effort for the project is: {}.\n The id assigned to you project is {}. \n You can use the id to let me know the actual effort once the project will be completed ".format(
+        round(prediction[0], 1), last_row_index)
+
+    client.chat_postMessage(channel=channel_id, text=response)
+
+    #add input to retrain dataset
     input_data.insert(0, last_row_index)
     input_data.append("NaN")
 
     new_row = pd.Series(input_data, index=seera.columns)
     seera = pd.concat([seera, pd.DataFrame([new_row])], ignore_index=True)
 
-    save_dataset(seera, 'SEERA_retrain_try.csv')
-
-    seera = seera.drop(['Indice Progetto', 'Actual effort'], axis=1)
-    seera = scaling_robust(seera)
-
-    input_scaled = seera.tail(1)
-    rf_regressor = load("models_saved/random_forest.joblib")
-    svr = load("models_saved/svr.joblib")
-    gb_regressor = load("models_saved/gradient_boosting.joblib")
-    knn_regressor = load("models_saved/knn.joblib")
-    elasticnet_regressor = load("models_saved/elastic_net.joblib")
-
-    y_pred_rf = rf_regressor.predict(input_scaled)
-    y_pred_svr = svr.predict(input_scaled)
-    y_pred_gb = gb_regressor.predict(input_scaled)
-    y_pred_knn = knn_regressor.predict(input_scaled)
-    y_pred_elastic = elasticnet_regressor.predict(input_scaled)
-
-    X_meta = np.column_stack((y_pred_gb, y_pred_rf, y_pred_svr, y_pred_knn, y_pred_elastic))
-    meta_regressor = load('models_saved/meta_regressor.joblib')
-    prediction = meta_regressor.predict(X_meta)
-
-    print(prediction)
-
-    #response = {'index': last_row_index, 'prediction': prediction.tolist()[0]}
-
-    response = "The estimated effort for the project is: {}.\n The id assigned to you project is {}. \n You can use the id to let me know the actual effort once the project will be completed ".format(round(prediction[0],1), last_row_index)
-
-    client.chat_postMessage(channel=channel_id, text=response)
+    save_dataset(seera, 'SEERA_retrain.csv')
 
     return Response(), 200
 
@@ -196,8 +179,7 @@ def retraining():
     index = float(input_data[0])
     real_effort = round(float(input_data[1]), 1)
 
-
-    seera = pd.read_csv("datasets/SEERA_retrain_try.csv", delimiter=',', decimal=".")
+    seera = pd.read_csv("datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
 
     # Retrieve the last row of the dataset
     row = seera.loc[seera['Indice Progetto']==index]
@@ -207,16 +189,17 @@ def retraining():
     # Update the modified last row in the dataset
     seera.loc[seera['Indice Progetto']==index] = row
 
-    save_dataset(seera, "SEERA_retrain_try.csv")
+    save_dataset(seera, "SEERA_retrain.csv")
 
     #seera.drop('Indice Progetto', axis=1)
     seera = seera.dropna(subset=['Actual effort'])
     seera = seera.reset_index(drop=True)
-    seera = scaling_robust(seera)
 
-    save_dataset(seera,'SEERA_train_try.csv')
-    seera = seera.drop('Indice Progetto',axis =1)
-    LinearRegression_MetaModel3.run(seera.drop('Actual effort', axis=1), seera['Actual effort'])
+    save_dataset(seera,'SEERA_train.csv')
+
+    ensemble = Ensemble()
+    ensemble.load_data()
+    ensemble.BlendingRegressor()
 
     client.chat_postMessage(channel=channel_id, text="Thank you for your help")
 

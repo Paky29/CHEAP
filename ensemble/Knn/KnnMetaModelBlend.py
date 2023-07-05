@@ -5,17 +5,12 @@ import smogn
 from sklearn.linear_model import ElasticNet
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.neural_network import MLPRegressor
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler, StandardScaler
 from sklearn.preprocessing import MinMaxScaler
-from xgboost import XGBRegressor
+from joblib import dump
 from sklearn.svm import SVR
-from sklearn.feature_selection import SelectKBest, f_regression, SequentialFeatureSelector, RFE, SelectFromModel
 from sklearn.neighbors import KNeighborsRegressor
 
 class Ensemble:
@@ -34,6 +29,10 @@ class Ensemble:
 
         self.y_bal = None
         self.X_bal = None
+
+    def save_model(self, model, filename):
+        # Save the model to a file
+        dump(model, "../../models_saved/" + filename)
 
     def data_balancing(self, X, y):
 
@@ -58,18 +57,9 @@ class Ensemble:
 
 
     def load_data(self):
-        seera = pd.read_csv("../../datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
+        seera = pd.read_csv("../../datasets/SEERA_train.csv", delimiter=',', decimal=".")
         self.y = seera['Actual effort']
-        #self.X = seera.drop('Actual effort',axis = 1)
-        self.X = seera[['Customer organization type', 'Estimated  duration', 'Application domain', 'Government policy impact',
-          'Organization management structure clarity', 'Developer training', 'Development team management',
-          'Top management support', 'Top management opinion of previous system',
-          ' Requirements flexibility ', 'Consultant availability', 'DBMS  expert availability',
-          'Software tool experience', 'Team size', 'Team contracts', 'Development environment adequacy',
-          'Tool availability ', 'DBMS used', 'Degree of software reuse ', 'Degree of risk management',
-          'Requirement accuracy level', 'Technical documentation', 'Required reusability', 'Performance requirements',
-          'Reliability requirements']]
-
+        self.X = seera.drop(['Indice Progetto','Actual effort'], axis = 1)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.y, test_size=0.15, random_state=23)
         self.X_train, self.x_val, self.y_train, self.y_val = train_test_split(self.X_train, self.y_train, test_size=0.20, random_state=23)
         self.X_bal, self.y_bal = self.data_balancing(self.X_train, self.y_train)
@@ -82,13 +72,13 @@ class Ensemble:
 
         # Define weak learners
         weak_learners = [
-            ('rf', rf_regressor),
-            ('ada', ada),
-            ('svr', svr),
-            ('en', elastic)
+            ('rf_regressor', rf_regressor),
+            ('ada_regressor', ada),
+            ('svr_regressor', svr),
+            ('en_regressor', elastic)
         ]
 
-        final_learner = make_pipeline(MinMaxScaler(),KNeighborsRegressor(n_neighbors = 11, leaf_size = 22, weights = 'distance', p = 2))
+        final_learner = make_pipeline(MinMaxScaler(), KNeighborsRegressor(n_neighbors = 11, leaf_size = 22, weights = 'distance', p = 2))
 
         train_meta_model = None
         test_meta_model = None
@@ -96,7 +86,7 @@ class Ensemble:
         # Start stacking
         for clf_id, clf in weak_learners:
             # Predictions for each classifier based on k-fold
-            val_predictions, test_predictions = self.train_level_0(clf)
+            val_predictions, test_predictions = self.train_level_0(clf_id,clf)
 
             # Stack predictions which will form the input data for the data model
             if isinstance(train_meta_model, np.ndarray):
@@ -120,7 +110,7 @@ class Ensemble:
         # Training level 1
         self.train_level_1(final_learner, train_meta_model, test_meta_model)
 
-    def train_level_0(self, clf):
+    def train_level_0(self,clf_id, clf):
         clf.fit(self.X_bal, self.y_bal)
 
         val_predictions = clf.predict(self.x_val)
@@ -133,6 +123,8 @@ class Ensemble:
         # These predictions will be used to test the meta model
         r2 = r2_score(self.y_test, test_predictions)
         print("Test "+str(r2))
+
+        self.save_model(clf, clf_id+".joblib")
 
         return val_predictions, test_predictions
 
@@ -154,6 +146,8 @@ class Ensemble:
 
         # Getting train and test accuracies from meta_model
         print(f"Train accuracy: {final_learner.score(train_meta_model, self.y_val)}")
+
+        self.save_model(final_learner, "meta_regressor.joblib")
 
 if __name__ == "__main__":
     ensemble = Ensemble()

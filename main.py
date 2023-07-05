@@ -1,12 +1,4 @@
-import os
-
-import pandas as pd
-
 from bot.command import run_bot
-from data_cleaning.cleanSeera import save_dataset, scaling_robust
-from ensemble import LinearRegression_MetaModel, SVR_MetaModel, LinearRegression_MetaModel2, LinearRegression_MetaModel3
-from models import ElasticNet, GradientBoostingRegression, KNearestNeighbors, RandomForestRegressor, \
-    SupportVectorRegression
 
 
 def main():
