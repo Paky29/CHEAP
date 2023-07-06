@@ -60,14 +60,11 @@ def remove_outliers(data, contamination):
     return filtered_data
 
 def feature_selection(seera):
-    seera = seera[['Customer organization type', 'Estimated  duration', 'Application domain', 'Government policy impact',
-          'Organization management structure clarity', 'Developer training', 'Development team management',
-          'Top management support', 'Top management opinion of previous system',
-          ' Requirements flexibility ', 'Consultant availability', 'DBMS  expert availability',
-          'Software tool experience', 'Team size', 'Team contracts', 'Development environment adequacy',
-          'Tool availability ', 'DBMS used', 'Degree of software reuse ', 'Degree of risk management',
-          'Requirement accuracy level', 'Technical documentation', 'Required reusability', 'Performance requirements',
-          'Reliability requirements','Actual effort']]
+    seera = seera[['Customer organization type', 'Estimated  duration', 'Application domain',
+          'Developer training', 'Development team management','Top management support',' Requirements flexibility ',
+          'Consultant availability', 'DBMS  expert availability','Software tool experience', 'Team size', 'Development environment adequacy',
+          'Tool availability ', 'DBMS used','Requirement accuracy level', 'Technical documentation', 'Required reusability',
+          'Performance requirements','Actual effort']]
     return seera
 
 def pearson_correlation(seera):
