@@ -86,6 +86,7 @@ def print_format():
     client.chat_postMessage(channel=channel_id, text=response)
     return Response(), 200
 
+
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.form
@@ -111,31 +112,24 @@ def predict():
     print(json_data)
     client.chat_postMessage(channel=channel_id, text=json_string)'''
 
-    print("Predict_input_data:")
-    print(input_data)
-
-    seera = pd.read_csv("datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
-    print(seera)
+    seera = pd.read_csv("../datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
+    temp = seera.drop(['Indice Progetto','Actual effort'], axis = 1)
+    input = pd.DataFrame([input_data], columns=temp.columns)
     last_row_index = seera['Indice Progetto'].max() + 1
 
-    rf_regressor = load("models_saved/rf_regressor.joblib")
-    svr = load("models_saved/svr_regressor.joblib")
-    ada_regressor = load("models_saved/ada_regressor.joblib")
-    elasticnet_regressor = load("models_saved/en_regressor.joblib")
-    meta_regressor = load("models_saved/meta_regressor.joblib")
+    rf_regressor = load("../models_saved/rf_regressor.joblib")
+    svr = load("../models_saved/svr_regressor.joblib")
+    ada_regressor = load("../models_saved/ada_regressor.joblib")
+    elasticnet_regressor = load("../models_saved/en_regressor.joblib")
+    meta_regressor = load("../models_saved/meta_regressor.joblib")
 
-    y_pred_rf = rf_regressor.predict(input_data)
-    y_pred_svr = svr.predict(input_data)
-    y_pred_ada = ada_regressor.predict(input_data)
-    y_pred_elastic = elasticnet_regressor.predict(input_data)
+    y_pred_rf = rf_regressor.predict(input)
+    y_pred_svr = svr.predict(input)
+    y_pred_ada = ada_regressor.predict(input)
+    y_pred_elastic = elasticnet_regressor.predict(input)
 
     X_meta = np.column_stack((y_pred_rf, y_pred_ada, y_pred_svr, y_pred_elastic))
-    meta_regressor = load('models_saved/meta_regressor.joblib')
     prediction = meta_regressor.predict(X_meta)
-
-    print(prediction)
-
-    # response = {'index': last_row_index, 'prediction': prediction.tolist()[0]}
 
     response = "The estimated effort for the project is: {}.\n The id assigned to you project is {}. \n You can use the id to let me know the actual effort once the project will be completed ".format(
         round(prediction[0], 1), last_row_index)
@@ -154,27 +148,23 @@ def predict():
     return Response(), 200
 
 @app.route('/update', methods=['POST'])
-def retraining():
+def update():
+
     data = request.form
     user_id = data.get('user_id')
     channel_id = data.get('channel_id')
-    print(data)
     text = data.get('text')
 
     # Split the string by commas
     feature_list = text.split(", ")
 
-    print(feature_list)
     # Extract only the values from the name-value pairs and convert them to integers
     input_data = [(feature.split(":")[1].strip()) for feature in feature_list]
-
-    print("Update_input_data:")
-    print(input_data)
 
     index = float(input_data[0])
     real_effort = round(float(input_data[1]), 1)
 
-    seera = pd.read_csv("datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
+    seera = pd.read_csv("../datasets/SEERA_retrain.csv", delimiter=',', decimal=".")
 
     # Retrieve the last row of the dataset
     row = seera.loc[seera['Indice Progetto']==index]
@@ -193,13 +183,24 @@ def retraining():
     save_dataset(seera,'SEERA_train.csv')
 
     ensemble = Ensemble()
-    ensemble.load_data()
-    ensemble.BlendingRegressor()
-
-    client.chat_postMessage(channel=channel_id, text="Thank you for your help")
+    try:
+        ensemble.load_data()
+        ensemble.BlendingRegressor()
+        client.chat_postMessage(channel=channel_id, text="Thank you for your help. It was a success!")
+    except Exception as e:
+        client.chat_postMessage(channel=channel_id, text="Thank you for your help, but the retraining failed. You can retry if you want.")
 
     return Response(), 200
 
+@app.route('/retrain', methods=['POST'])
+def retraining():
+    ensemble = Ensemble()
+    try:
+        ensemble.load_data()
+        ensemble.BlendingRegressor()
+        client.chat_postMessage(channel=channel_id, text="The retraining was a success!")
+    except Exception as e:
+        client.chat_postMessage(channel=channel_id, text="Something went wrong...the retraining failed. You can retry if you want.")
 
 def run_bot():
     app.run(debug=True)
