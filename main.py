@@ -1,4 +1,8 @@
-from bot.command import run_bot
+#from bot.command import run_bot
+import pandas as pd
+
+from data_cleaning.cleanSeera import save_dataset
+from ensemble.Knn.KnnMetaModelCV import run
 
 
 def main():
@@ -15,4 +19,4 @@ def main():
     run_bot()
 
 if __name__=="__main__":
-    main()
+    run()

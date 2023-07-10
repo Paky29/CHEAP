@@ -1,3 +1,3 @@
-Indice Progetto,Customer organization type,Estimated  duration,Application domain,Developer training,Development team management,Top management support, Requirements flexibility ,Consultant availability,DBMS  expert availability,Software tool experience,Team size,Development environment adequacy,Tool availability ,DBMS used,Requirement accuracy level,Technical documentation,Required reusability,Performance requirements,Actual effort
-0,5.0,6.0,7.0,3.0,3.0,3.0,4.56,2.0,0.0,2.0,12.0,2.0,4.0,1.0,4.0,1.0,2.0,1.0,20328.0
-1,10.0,0.25,2.0,1.0,2.0,1.0,1.89,1.0,1.0,3.0,6.0,1.0,5.0,5.0,1.0,2.0,2.0,1.0,924.0
+Organization type,Estimated  duration,Development type,Government policy impact,Developer hiring policy,Development team management,Consultant availability,DBMS  expert availability,Software tool experience,Programmers experience in programming language,Team size,Daily working hours,Team contracts,Development environment adequacy,Tool availability ,Methodology,Degree of software reuse ,Requirement accuracy level,User manual,Performance requirements,Actual effort
+4.0,6.0,1.0,4.0,1.0,3.0,2.0,0.0,2.0,1.0,12.0,7.0,1.0,2.0,4.0,2.0,3.0,4.0,1.0,1.0,20328.0
+4.0,0.25,4.0,3.0,1.0,2.0,1.0,1.0,3.0,4.0,6.0,14.0,1.0,1.0,5.0,1.0,1.0,1.0,2.0,1.0,924.0

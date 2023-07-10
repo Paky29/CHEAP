@@ -60,11 +60,12 @@ def remove_outliers(data, contamination):
     return filtered_data
 
 def feature_selection(seera):
-    seera = seera[['Customer organization type', 'Estimated  duration', 'Application domain',
-          'Developer training', 'Development team management','Top management support',' Requirements flexibility ',
-          'Consultant availability', 'DBMS  expert availability','Software tool experience', 'Team size', 'Development environment adequacy',
-          'Tool availability ', 'DBMS used','Requirement accuracy level', 'Technical documentation', 'Required reusability',
-          'Performance requirements','Actual effort']]
+    seera = seera[['Organization type', 'Estimated  duration', 'Development type', 'Government policy impact',
+                   'Developer hiring policy', 'Developer incentives policy ', 'Development team management',
+                   'Consultant availability', 'DBMS  expert availability', 'Software tool experience',
+                   'Programmers experience in programming language', 'Team size', 'Daily working hours', 'Team contracts',
+                   'Schedule quality', 'Development environment adequacy', 'Tool availability ', 'Methodology',
+                   'Degree of software reuse ', 'Requirement accuracy level', 'User manual', 'Performance requirements','Actual effort']]
     return seera
 
 def pearson_correlation(seera):
@@ -84,7 +85,7 @@ def clean_dataset():
     #delete useless feature or calculable features at the end of the project
     #high correlation between dedicated member and team size, size of organization and size IT department
     #estimated size e degree of standards usage have too many NaN values
-    seera = seera.drop(['Year of project','ProjID','Organization id','Role in organization','Actual duration','Size of organization','% project gain (loss)','Other sizing method','Economic instability impact','Clarity of manual system',' Requirment stability ','Team continuity ','Income satisfaction','# Multiple programing languages ','Level of outsourcing','Outsourcing impact','Comments within the code','Estimated size','Dedicated team members','Degree of standards usage'], axis=1)
+    seera = seera.drop(['Year of project','Technical stability','ProjID','Organization id','Role in organization','Schedule quality','Actual duration','Size of organization','% project gain (loss)','Other sizing method','Economic instability impact','Clarity of manual system',' Requirment stability ','Team continuity ','Income satisfaction','# Multiple programing languages ','Level of outsourcing','Outsourcing impact','Comments within the code','Estimated size','Dedicated team members','Degree of standards usage'], axis=1)
 
     # alta correlazione di Pearson con Team size e Program capability
     seera = seera.drop(['Estimated effort', 'Analysts capability '], axis=1)
