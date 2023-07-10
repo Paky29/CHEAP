@@ -1,12 +1,9 @@
 import numpy as np
 import pandas as pd
 import smogn
-from sklearn.model_selection import  KFold
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import MinMaxScaler
-
 
 def data_balancing(X, y):
   train = X.copy()
@@ -31,7 +28,7 @@ def run():
     y = seera['Actual effort']
     X = seera.drop(['Actual effort', 'Indice Progetto'], axis=1)
 
-    knn = make_pipeline(KNeighborsRegressor(n_neighbors=5, leaf_size=30, weights='distance', p=1))
+    ada = AdaBoostRegressor(learning_rate=0.04371275290084875, loss='square', n_estimators=74)
     kfold = KFold(n_splits=8, shuffle=True, random_state=23)
 
     # Liste per memorizzare le performance dei modelli in ogni fold
@@ -48,9 +45,9 @@ def run():
         y_test = y.iloc[test_indices]
 
         X_train, y_train = data_balancing(X_train, y_train)
-        knn.fit(X_train, y_train)
+        ada.fit(X_train, y_train)
 
-        predictions = knn.predict(X_test)
+        predictions = ada.predict(X_test)
 
         print(predictions)
         print(y_test)
@@ -71,7 +68,7 @@ def run():
     mean_pred = np.mean(pred_scores)
 
     # Stampa delle performance medie
-    print('Prestazioni KNN')
+    print('Prestazioni AdaBoostingRegression')
     print('Average RMSE:', mean_rmse)
     print('Average R^2 score:', mean_r2)
     print('Average MMRE:', mean_mre)

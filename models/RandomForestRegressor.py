@@ -1,60 +1,81 @@
 import numpy as np
+import pandas as pd
+import smogn
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import  KFold
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
-from deap import base, creator, tools
-from feature_selection import GeneticAlgorithm
 
-def evaluate(individual, X_train, X_test, y_train, y_test):
-    selected_features = [feature for feature, mask in zip(X_train.columns, individual) if mask]
-    X_train_selected = X_train[selected_features]
-    X_test_selected = X_test[selected_features]
+def data_balancing(X, y):
+  train = X.copy()
+  train.loc[:, 'Actual effort'] = y
+  train = train.reset_index(drop=True)
+  train_smogn = smogn.smoter(
+      data=train,
+      y='Actual effort',
+      k=len(X),  ## positive integer (k < n)
+      samp_method='extreme',  ## ('balance' or 'extreme')
+      # under_samp=True,
+      ## phi relevance arguments
+      rel_thres=0.70,  ## positive real number (0 < R < 1)
+      rel_method='auto',  ## string ('auto' or 'manual')
+      rel_xtrm_type='both',  ## string ('low' or 'both' or 'high')
+      rel_coef=2.00
+  )
+  return train_smogn.drop(['Actual effort'], axis=1), train_smogn['Actual effort']
 
-    #train
-    rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_regressor.fit(X_train_selected, y_train)
+def run():
+    seera = pd.read_csv("../datasets/SEERA_train.csv", delimiter=',', decimal=".")
+    y = seera['Actual effort']
+    X = seera.drop(['Actual effort', 'Indice Progetto'], axis=1)
 
-    #predictions
-    y_pred = rf_regressor.predict(X_test_selected)
+    rf_regressor = RandomForestRegressor(max_depth=100, max_features=1.0, min_samples_split=4, n_estimators=49)
+    kfold = KFold(n_splits=8, shuffle=True, random_state=23)
 
-    #metrics
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    r2 = r2_score(y_test, y_pred)
-    mre = np.mean(np.abs(y_test - y_pred) / y_test) * 100
+    # Liste per memorizzare le performance dei modelli in ogni fold
+    rmse_scores = []
+    r2_scores = []
+    mre_scores = []
+    pred_scores = []
 
-    return rmse, r2, mre
+    # Suddivisione dei dati utilizzando la k-fold cross-validation
+    for train_indices, test_indices in kfold.split(X):
+        X_train = X.iloc[train_indices]
+        X_test = X.iloc[test_indices]
+        y_train = y.iloc[train_indices]
+        y_test = y.iloc[test_indices]
 
-def run(X,y):
-    print('RandomForestRegressor')
-    # split 70/30
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
+        X_train, y_train = data_balancing(X_train, y_train)
+        rf_regressor.fit(X_train, y_train)
 
-    rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_regressor.fit(X_train, y_train)
+        predictions = rf_regressor.predict(X_test)
 
-    y_pred = rf_regressor.predict(X_test)
-    # Evaluate the model performance
-    print('RMSE:', np.sqrt(mean_squared_error(y_test, y_pred)))
-    print('R^2 score:', r2_score(y_test, y_pred))
-    print('MRE:', np.mean(np.abs(y_test - y_pred) / y_test) * 100)
+        print(predictions)
+        print(y_test)
+
+        rmse = np.sqrt(mean_squared_error(y_test, predictions))
+        r2 = r2_score(y_test, predictions)
+        mre = np.abs(y_test - predictions) / y_test
+        p = mre[mre < .25]
+
+        rmse_scores.append(rmse)
+        r2_scores.append(r2)
+        mre_scores.append(np.mean(mre))
+        pred_scores.append((p.size / mre.size) * 100)
+
+    mean_rmse = np.mean(rmse_scores)
+    mean_r2 = np.mean(r2_scores)
+    mean_mre = np.mean(mre_scores)
+    mean_pred = np.mean(pred_scores)
+
+    # Stampa delle performance medie
+    print('Prestazioni RandomForest')
+    print('Average RMSE:', mean_rmse)
+    print('Average R^2 score:', mean_r2)
+    print('Average MMRE:', mean_mre)
+    print('Average Pred:', mean_pred)
     print('-------------------------')
 
-def runFeatureSelection(X,y):
-    # split 70/30
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=42)
 
-    # Inizializzazione DEAP
-    creator.create("FitnessMax", base.Fitness, weights=(-1.0, -1.0, -1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMax)
+if __name__ == "__main__":
+    run()
 
-    toolbox = base.Toolbox()
-    toolbox.register("attr_bool", np.random.choice, [False, True])
-    toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, len(X.columns))
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-    toolbox.register("evaluate", evaluate, X_train=X_train, X_test=X_test, y_train=y_train, y_test=y_test)
-    toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
-    toolbox.register("select", tools.selTournament, tournsize=3)
-
-    GeneticAlgorithm.runGA(toolbox, X)
