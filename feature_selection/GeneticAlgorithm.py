@@ -1,5 +1,5 @@
-import numpy as np
 from deap import tools
+import numpy as np
 
 def runGA(toolbox,X):
     population_size = 100
