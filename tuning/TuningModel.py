@@ -114,6 +114,7 @@ class Ensemble:
         mre_scores = []
 
         mre_clf_scores = []
+        mre_clf_cross_scores = []
 
         # Suddivisione dei dati utilizzando la k-fold cross-validation
         for train_indices, test_indices in kfold.split(self.X):
@@ -126,7 +127,7 @@ class Ensemble:
             # Start stacking
             for clf_id, clf in weak_learners:
                 # Predictions for each regressor based on k-fold
-                predictions_clf = self.k_fold_cross_validation(clf)
+                predictions_clf, mre_cross = self.k_fold_cross_validation(clf)
                 print("*******************************")
 
                 # Predictions for test set for each regressor based on train of level 0
@@ -134,6 +135,7 @@ class Ensemble:
 
                 if clf_id == clf_tune:
                   mre_clf_scores.append(mre_clf)
+                  mre_clf_cross_scores.append(mre_cross)
 
 
                 # Stack predictions which will form the input data for the data model
@@ -169,9 +171,14 @@ class Ensemble:
         mean_mre = np.mean(mre_scores)
 
         mean_mre_clf = np.mean(mre_clf_scores)
+        mean_mre_clf_cross = np.mean(mre_clf_cross_scores)
+
 
 
         # Stampa delle performance medie
+
+        print('Average MRE for cross ' + clf_tune + ":", mean_mre_clf_cross)
+        print('-------------------------')
 
         print('Average MRE for ' + clf_tune + ":", mean_mre_clf)
         print('-------------------------')
@@ -181,10 +188,12 @@ class Ensemble:
         print('Average MRE:', mean_mre)
         print('-------------------------')
 
-        return mean_mre if clf_tune == 'knn' else mean_mre_clf
+        return mean_mre if clf_tune == 'knn' else mean_mre_clf_cross
 
     def k_fold_cross_validation(self, clf):
         k_predictions = None
+
+        mre_scores = []
 
         # Number of samples per fold
         folders_size = int(len(self.X_train) / self.k)
@@ -218,15 +227,19 @@ class Ensemble:
             print(fold + 1, " iterazione kfold")
             print("r2: ", r2_score(fold_y_test, fold_y_pred))
             print("rmse: ", np.sqrt(mean_squared_error(fold_y_test, fold_y_pred)))
-            print("mre: ", np.mean(np.abs(fold_y_test - fold_y_pred) / fold_y_test) * 100)
+            mre_fold = np.mean(np.abs(fold_y_test - fold_y_pred) / fold_y_test) * 100
+            print("mre: ", mre_fold)
 
+            mre_scores.append(mre_fold)
             # Store predictions for each fold_X_test
             if isinstance(k_predictions, np.ndarray):
                 k_predictions = np.concatenate((k_predictions, fold_y_pred))
             else:
                 k_predictions = fold_y_pred
 
-        return k_predictions
+        mean_mre_cross = np.mean(mre_scores)
+
+        return k_predictions, mean_mre_cross
 
     def train_level_0(self, clf):
 
